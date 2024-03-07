@@ -31,6 +31,7 @@ use bitvec::{order::Lsb0 as BitOrderLsb0, vec::BitVec};
 use frame_support::{
 	defensive,
 	pallet_prelude::*,
+	storage::PrefixIterator,
 	traits::{EnqueueMessage, Footprint, QueueFootprint},
 	BoundedSlice,
 };
@@ -466,6 +467,44 @@ impl fmt::Debug for UmpAcceptanceCheckErr {
 	}
 }
 
+// An in memory overlay for large storage maps that we frequently iterate and want
+// to reading/writing to multiple times. A cache with write back capabilities.
+struct StorageMapOverlay<K, V> {
+	data: hashbrown::HashMap<K, V>,
+	modified: hashbrown::HashSet<K>,
+}
+
+impl<K, V> StorageMapOverlay<K, V>
+where
+	K: sp_std::hash::Hash + Eq + PartialEq + Clone + Copy,
+	V: Clone,
+{
+	// Construct a new overlay instance given the populate fn.
+	pub fn new<F>(populate: F) -> Self
+	where
+		F: Fn() -> PrefixIterator<(K, V)>,
+	{
+		let data = populate().collect();
+		Self { data, modified: Default::default() }
+	}
+
+	/// Get a value from cache or fallback to storage if not present in cache
+	pub fn get(&self, key: &K) -> Option<V> {
+		self.data.get(key).cloned()
+	}
+
+	/// Update a value and make key dirty.
+	pub fn set(&mut self, key: K, value: V) {
+		self.data.insert(key, value);
+		self.modified.insert(key);
+	}
+
+	/// Returns all the dirty keys/values to be updated by caller.
+	pub fn into_iter(mut self) -> impl IntoIterator<Item = (K, Option<V>)> {
+		self.modified.into_iter().map(move |key| (key, self.data.remove(&key)))
+	}
+}
+
 impl<T: Config> Pallet<T> {
 	/// Block initialization logic, called by initializer.
 	pub(crate) fn initializer_initialize(_now: BlockNumberFor<T>) -> Weight {
@@ -519,6 +558,19 @@ impl<T: Config> Pallet<T> {
 
 		let mut paras_made_available = BTreeSet::new();
 
+		// We copy all the key/vals from the pending availability candidates in memory.
+		// Considering that commitments have been merged into `CandidatePendingAvailability` we
+		// need the below loops to operate `in-memory`.
+		//
+		// Notes on the safety of using `hashbrown::HashMap`:
+		// It is safe to do so because the key is not susceptible to hash collision attacks,
+		// as attackers cannot control the `para_id` being assigned. These are assigned in order
+		// and bounded economically.
+		// let mut pending_availability =
+		// 	<PendingAvailability<T>>::drain().collect::<hashbrown::HashMap<_, _>>();
+
+		let mut pending_availability = StorageMapOverlay::new(|| <PendingAvailability<T>>::iter());
+
 		for (checked_bitfield, validator_index) in
 			signed_bitfields.into_iter().map(|signed_bitfield| {
 				let validator_idx = signed_bitfield.validator_index();
@@ -528,32 +580,31 @@ impl<T: Config> Pallet<T> {
 			for (bit_idx, _) in checked_bitfield.0.iter().enumerate().filter(|(_, is_av)| **is_av) {
 				let core_index = CoreIndex(bit_idx as u32);
 				if let Some(para_id) = core_lookup(core_index) {
-					<PendingAvailability<T>>::mutate(&para_id, |candidates| {
-						if let Some(candidates) = candidates {
-							for (candidate_idx, candidate) in candidates.iter_mut().enumerate() {
-								if candidate.core == core_index {
-									// defensive check - this is constructed by loading the
-									// availability bitfield record, which is always `Some` if
-									// the core is occupied - that's why we're here.
-									if let Some(mut bit) = candidate
-										.availability_votes
-										.get_mut(validator_index.0 as usize)
-									{
-										*bit = true;
-									}
+					if let Some(mut candidates_pending) = pending_availability.get(&para_id) {
+						for (candidate_idx, candidate) in candidates_pending.iter_mut().enumerate()
+						{
+							if candidate.core == core_index {
+								// defensive check - this is constructed by loading the
+								// availability bitfield record, which is always `Some` if
+								// the core is occupied - that's why we're here.
+								if let Some(mut bit) =
+									candidate.availability_votes.get_mut(validator_index.0 as usize)
+								{
+									*bit = true;
+								}
 
-									// In terms of candidate enactment, we only care if the first
-									// candidate of this para was made available. We don't enact
-									// candidates until their predecessors have been enacted.
-									if candidate_idx == 0 &&
-										candidate.availability_votes.count_ones() >= threshold
-									{
-										paras_made_available.insert(para_id);
-									}
+								// In terms of candidate enactment, we only care if the first
+								// candidate of this para was made available. We don't enact
+								// candidates until their predecessors have been enacted.
+								if candidate_idx == 0 &&
+									candidate.availability_votes.count_ones() >= threshold
+								{
+									paras_made_available.insert(para_id);
 								}
 							}
 						}
-					});
+						pending_availability.set(para_id, candidates_pending);
+					}
 				} else {
 					// No parachain is occupying that core yet.
 				}
@@ -571,10 +622,12 @@ impl<T: Config> Pallet<T> {
 		// We can only free cores whose candidates form a chain starting from the included para
 		// head.
 		// We assume dependency order is preserved in `PendingAvailability`.
-		for (para_id, candidates_pending_availability) in paras_made_available
+		let paras_with_candidates = paras_made_available
 			.into_iter()
-			.filter_map(|para_id| <PendingAvailability<T>>::get(para_id).map(|c| (para_id, c)))
-		{
+			.filter_map(|para_id| pending_availability.get(&para_id).map(|c| (para_id, c)))
+			.collect::<Vec<_>>();
+
+		for (para_id, candidates_pending_availability) in paras_with_candidates {
 			let mut stopped_at_index = None;
 
 			// We try to check all candidates, because some of them may have already been made
@@ -592,26 +645,30 @@ impl<T: Config> Pallet<T> {
 
 			// Trim the pending availability candidates storage and enact candidates now.
 			if let Some(stopped_at_index) = stopped_at_index {
-				<PendingAvailability<T>>::mutate(&para_id, |candidates| {
-					if let Some(candidates) = candidates {
-						let candidates_made_available = candidates.drain(0..=stopped_at_index);
-						for candidate in candidates_made_available {
-							let receipt = CommittedCandidateReceipt {
-								descriptor: candidate.descriptor,
-								commitments: candidate.commitments,
-							};
-							let _weight = Self::enact_candidate(
-								candidate.relay_parent_number,
-								receipt,
-								candidate.backers,
-								candidate.availability_votes,
-								candidate.core,
-								candidate.backing_group,
-							);
-						}
+				if let Some(mut candidates) = pending_availability.get(&para_id) {
+					let candidates_made_available = candidates.drain(0..=stopped_at_index);
+					for candidate in candidates_made_available {
+						let receipt = CommittedCandidateReceipt {
+							descriptor: candidate.descriptor,
+							commitments: candidate.commitments,
+						};
+						let _weight = Self::enact_candidate(
+							candidate.relay_parent_number,
+							receipt,
+							candidate.backers,
+							candidate.availability_votes,
+							candidate.core,
+							candidate.backing_group,
+						);
 					}
-				});
+					pending_availability.set(para_id, candidates);
+				}
 			}
+		}
+
+		// Write back to storage only keys that have been updated or deleted.
+		for (para_id, candidates) in pending_availability.into_iter() {
+			<PendingAvailability<T>>::set(para_id, candidates);
 		}
 
 		freed_cores
