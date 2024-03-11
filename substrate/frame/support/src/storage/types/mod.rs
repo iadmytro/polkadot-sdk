@@ -29,6 +29,7 @@ mod key;
 mod map;
 mod nmap;
 mod value;
+mod overlay_map;
 
 pub use counted_map::{CountedStorageMap, CountedStorageMapInstance, Counter};
 pub use counted_nmap::{CountedStorageNMap, CountedStorageNMapInstance};

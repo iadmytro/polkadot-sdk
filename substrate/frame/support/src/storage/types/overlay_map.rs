@@ -15,8 +15,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Storage map type. Implements StorageMap, StorageIterableMap, StoragePrefixedMap traits and their
-//! methods directly.
+//! Storage overlayed map type. Allows for on-demand loading for storage and performs
+//! all operations in memory by default. Write back to storage can be performed using
+//! `commit()`.
 
 use crate::{
 	storage::{
@@ -34,70 +35,6 @@ use sp_arithmetic::traits::SaturatedConversion;
 use sp_metadata_ir::{StorageEntryMetadataIR, StorageEntryTypeIR};
 use sp_std::prelude::*;
 
-/// A type representing a *map* in storage. A *storage map* is a mapping of keys to values of a
-/// given type stored on-chain.
-///
-/// For general information regarding the `#[pallet::storage]` attribute, refer to
-/// [`crate::pallet_macros::storage`].
-///
-/// # Example
-///
-/// ```
-/// #[frame_support::pallet]
-/// mod pallet {
-///     # use frame_support::pallet_prelude::*;
-///     # #[pallet::config]
-///     # pub trait Config: frame_system::Config {}
-///     # #[pallet::pallet]
-///     # pub struct Pallet<T>(_);
-/// 	/// A kitchen-sink StorageMap, with all possible additional attributes.
-///     #[pallet::storage]
-/// 	#[pallet::getter(fn foo)]
-/// 	#[pallet::storage_prefix = "OtherFoo"]
-/// 	#[pallet::unbounded]
-///     pub type Foo<T> = StorageMap<
-/// 		_,
-/// 		Blake2_128Concat,
-/// 		u32,
-/// 		u32,
-/// 		ValueQuery
-/// 	>;
-///
-/// 	/// Alternative named syntax.
-///     #[pallet::storage]
-///     pub type Bar<T> = StorageMap<
-/// 		Hasher = Blake2_128Concat,
-/// 		Key = u32,
-/// 		Value = u32,
-/// 		QueryKind = ValueQuery
-/// 	>;
-/// }
-/// ```
-pub struct StorageMap<
-	Prefix,
-	Hasher,
-	Key,
-	Value,
-	QueryKind = OptionQuery,
-	OnEmpty = GetDefault,
-	MaxValues = GetDefault,
->(core::marker::PhantomData<(Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues)>);
-
-impl<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues> Get<u32>
-	for KeyLenOf<StorageMap<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues>>
-where
-	Prefix: StorageInstance,
-	Hasher: crate::hash::StorageHasher,
-	Key: FullCodec + MaxEncodedLen,
-{
-	fn get() -> u32 {
-		// The `max_len` of the key hash plus the pallet prefix and storage prefix (which both are
-		// hashed with `Twox128`).
-		let z = Hasher::max_len::<Key>() + Twox128::max_len::<()>() * 2;
-		z as u32
-	}
-}
-
 /// Same as `StorageMap`, but holds all accesses in memory until `commit()`` is called to
 /// write them to actual storage.
 pub struct StorageMapOverlay<
@@ -112,7 +49,7 @@ Prefix,
 	inner: StorageMap<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues>,
 	dirty: BTreeSet<Key>,
 	data: BTreeMap<Key, Value>,
-};
+}
 
 impl<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues> Get<u32>
 	for KeyLenOf<StorageMapOverlay<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues>>
@@ -126,38 +63,6 @@ where
 		z as u32
 	}
 }
-
-impl<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues>
-	crate::storage::generator::StorageMap<Key, Value>
-	for StorageMap<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues>
-where
-	Prefix: StorageInstance,
-	Hasher: crate::hash::StorageHasher,
-	Key: FullCodec,
-	Value: FullCodec,
-	QueryKind: QueryKindTrait<Value, OnEmpty>,
-	OnEmpty: Get<QueryKind::Query> + 'static,
-	MaxValues: Get<Option<u32>>,
-{
-	type Query = QueryKind::Query;
-	type Hasher = Hasher;
-	fn pallet_prefix() -> &'static [u8] {
-		Prefix::pallet_prefix().as_bytes()
-	}
-	fn storage_prefix() -> &'static [u8] {
-		Prefix::STORAGE_PREFIX.as_bytes()
-	}
-	fn prefix_hash() -> [u8; 32] {
-		Prefix::prefix_hash()
-	}
-	fn from_optional_value_to_query(v: Option<Value>) -> Self::Query {
-		QueryKind::from_optional_value_to_query(v)
-	}
-	fn from_query_to_optional_value(v: Self::Query) -> Option<Value> {
-		QueryKind::from_query_to_optional_value(v)
-	}
-}
-
 
 impl<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues>
 	crate::storage::generator::StorageMap<Key, Value>
@@ -191,7 +96,7 @@ where
 }
 
 impl<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues> StoragePrefixedMap<Value>
-	for StorageMap<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues>
+	for StorageOverlayMap<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues>
 where
 	Prefix: StorageInstance,
 	Hasher: crate::hash::StorageHasher,
@@ -210,7 +115,7 @@ where
 }
 
 impl<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues>
-	StorageMap<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues>
+    StorageOverlayMap<Prefix, Hasher, Key, Value, QueryKind, OnEmpty, MaxValues>
 where
 	Prefix: StorageInstance,
 	Hasher: crate::hash::StorageHasher,
