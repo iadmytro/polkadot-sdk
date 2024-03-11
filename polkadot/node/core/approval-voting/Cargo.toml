@@ -18,7 +18,7 @@ bitvec = { version = "1.0.0", default-features = false, features = ["alloc"] }
 schnellru = "0.2.1"
 merlin = "3.0"
 schnorrkel = "0.11.4"
-kvdb = "0.13.0"
+kvdb = { version = "0.13.0", git = "https://github.com/iadmytro/parity-common", branch = "rocksdb-0.19.0-tweak" }
 derive_more = "0.99.17"
 thiserror = "1.0.48"
 itertools = "0.10.5"
@@ -49,7 +49,7 @@ sp-core = { path = "../../../../substrate/primitives/core" }
 sp-consensus-babe = { path = "../../../../substrate/primitives/consensus/babe" }
 polkadot-node-subsystem-test-helpers = { path = "../../subsystem-test-helpers" }
 assert_matches = "1.4.0"
-kvdb-memorydb = "0.13.0"
+kvdb-memorydb ={ version = "0.13.0", git = "https://github.com/iadmytro/parity-common", branch = "rocksdb-0.19.0-tweak" }
 test-helpers = { package = "polkadot-primitives-test-helpers", path = "../../../primitives/test-helpers" }
 log = "0.4.17"
 env_logger = "0.9.0"

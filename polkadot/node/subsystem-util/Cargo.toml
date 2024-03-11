@@ -39,7 +39,7 @@ sp-application-crypto = { path = "../../../substrate/primitives/application-cryp
 sp-keystore = { path = "../../../substrate/primitives/keystore" }
 sc-client-api = { path = "../../../substrate/client/api" }
 
-kvdb = "0.13.0"
+kvdb = { version = "0.13.0", git = "https://github.com/iadmytro/parity-common", branch = "rocksdb-0.19.0-tweak" }
 parity-db = { version = "0.4.12" }
 
 [dev-dependencies]
@@ -52,4 +52,4 @@ lazy_static = "1.4.0"
 polkadot-primitives-test-helpers = { path = "../../primitives/test-helpers" }
 kvdb-shared-tests = "0.11.0"
 tempfile = "3.1.0"
-kvdb-memorydb = "0.13.0"
+kvdb-memorydb ={ version = "0.13.0", git = "https://github.com/iadmytro/parity-common", branch = "rocksdb-0.19.0-tweak" }

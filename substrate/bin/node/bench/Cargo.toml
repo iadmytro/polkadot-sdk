@@ -27,8 +27,8 @@ sp-state-machine = { path = "../../../primitives/state-machine" }
 serde = "1.0.195"
 serde_json = "1.0.111"
 derive_more = { version = "0.99.17", default-features = false, features = ["display"] }
-kvdb = "0.13.0"
-kvdb-rocksdb = "0.19.0"
+kvdb = { version = "0.13.0", git = "https://github.com/iadmytro/parity-common", branch = "rocksdb-0.19.0-tweak" }
+kvdb-rocksdb = { version = "0.19.0", git = "https://github.com/iadmytro/parity-common", branch = "rocksdb-0.19.0-tweak" }
 sp-trie = { path = "../../../primitives/trie" }
 sp-core = { path = "../../../primitives/core" }
 sp-consensus = { path = "../../../primitives/consensus/common" }

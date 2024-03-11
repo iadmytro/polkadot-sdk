@@ -17,7 +17,7 @@ polkadot-primitives = { path = "../../../primitives" }
 polkadot-node-primitives = { path = "../../primitives" }
 polkadot-node-subsystem = { path = "../../subsystem" }
 polkadot-node-subsystem-util = { path = "../../subsystem-util" }
-kvdb = "0.13.0"
+kvdb = { version = "0.13.0", git = "https://github.com/iadmytro/parity-common", branch = "rocksdb-0.19.0-tweak" }
 thiserror = "1.0.48"
 parity-scale-codec = "3.6.1"
 
@@ -26,4 +26,4 @@ polkadot-node-subsystem-test-helpers = { path = "../../subsystem-test-helpers" }
 sp-core = { path = "../../../../substrate/primitives/core" }
 parking_lot = "0.12.1"
 assert_matches = "1"
-kvdb-memorydb = "0.13.0"
+kvdb-memorydb ={ version = "0.13.0", git = "https://github.com/iadmytro/parity-common", branch = "rocksdb-0.19.0-tweak" }

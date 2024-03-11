@@ -7153,22 +7153,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "kvdb"
+version = "0.13.0"
+source = "git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak#e1edcd58bab47ba92e4909eda4de95b03e1f2563"
+dependencies = [
+ "smallvec",
+]
+
+[[package]]
 name = "kvdb-memorydb"
 version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf7a85fe66f9ff9cd74e169fdd2c94c6e1e74c412c99a73b4df3200b5d3760b2"
+source = "git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak#e1edcd58bab47ba92e4909eda4de95b03e1f2563"
 dependencies = [
- "kvdb",
+ "kvdb 0.13.0 (git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak)",
  "parking_lot 0.12.1",
 ]
 
 [[package]]
 name = "kvdb-rocksdb"
 version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b644c70b92285f66bfc2032922a79000ea30af7bc2ab31902992a5dcb9b434f6"
+source = "git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak#e1edcd58bab47ba92e4909eda4de95b03e1f2563"
 dependencies = [
- "kvdb",
+ "kvdb 0.13.0 (git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak)",
  "num_cpus",
  "parking_lot 0.12.1",
  "regex",
@@ -7182,7 +7188,7 @@ version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64d3b4e3e80c369f1b5364b6acdeba9b8a02285e91a5570f7c0404b7f9024541"
 dependencies = [
- "kvdb",
+ "kvdb 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -8577,7 +8583,7 @@ dependencies = [
  "futures",
  "hash-db",
  "kitchensink-runtime",
- "kvdb",
+ "kvdb 0.13.0 (git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak)",
  "kvdb-rocksdb",
  "lazy_static",
  "log",
@@ -12407,7 +12413,7 @@ dependencies = [
  "futures",
  "futures-timer",
  "itertools 0.10.5",
- "kvdb",
+ "kvdb 0.13.0 (git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak)",
  "kvdb-memorydb",
  "log",
  "merlin 3.0.0",
@@ -12448,7 +12454,7 @@ dependencies = [
  "env_logger 0.9.3",
  "futures",
  "futures-timer",
- "kvdb",
+ "kvdb 0.13.0 (git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak)",
  "kvdb-memorydb",
  "log",
  "parity-scale-codec",
@@ -12563,7 +12569,7 @@ dependencies = [
  "assert_matches",
  "futures",
  "futures-timer",
- "kvdb",
+ "kvdb 0.13.0 (git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak)",
  "kvdb-memorydb",
  "parity-scale-codec",
  "parking_lot 0.12.1",
@@ -12585,7 +12591,7 @@ dependencies = [
  "fatality",
  "futures",
  "futures-timer",
- "kvdb",
+ "kvdb 0.13.0 (git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak)",
  "kvdb-memorydb",
  "parity-scale-codec",
  "polkadot-node-primitives",
@@ -12978,7 +12984,7 @@ dependencies = [
  "futures",
  "futures-channel",
  "itertools 0.10.5",
- "kvdb",
+ "kvdb 0.13.0 (git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak)",
  "kvdb-memorydb",
  "kvdb-shared-tests",
  "lazy_static",
@@ -13397,7 +13403,7 @@ dependencies = [
  "futures",
  "hex-literal",
  "is_executable",
- "kvdb",
+ "kvdb 0.13.0 (git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak)",
  "kvdb-rocksdb",
  "log",
  "mmr-gadget",
@@ -15513,7 +15519,7 @@ dependencies = [
  "criterion 0.4.0",
  "hash-db",
  "kitchensink-runtime",
- "kvdb",
+ "kvdb 0.13.0 (git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak)",
  "kvdb-memorydb",
  "kvdb-rocksdb",
  "linked-hash-map",
@@ -18366,7 +18372,7 @@ dependencies = [
 name = "sp-database"
 version = "4.0.0-dev"
 dependencies = [
- "kvdb",
+ "kvdb 0.13.0 (git+https://github.com/iadmytro/parity-common?branch=rocksdb-0.19.0-tweak)",
  "parking_lot 0.12.1",
 ]
 

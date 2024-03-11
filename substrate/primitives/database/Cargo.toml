@@ -14,5 +14,5 @@ readme = "README.md"
 workspace = true
 
 [dependencies]
-kvdb = "0.13.0"
+kvdb = { version = "0.13.0", git = "https://github.com/iadmytro/parity-common", branch = "rocksdb-0.19.0-tweak" }
 parking_lot = "0.12.1"
